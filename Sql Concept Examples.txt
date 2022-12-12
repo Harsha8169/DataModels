@@ -1,0 +1,1179 @@
+---Question1------
+--(a)-----------
+
+SELECT companyname AS "Company Name",contactname AS "Supplier Contact",
+region AS "Supplier Region",country AS "Supplier Country" FROM corp.suppliers;
+
+---- Exp: Defined Column Names as per the requirement ------------
+
+--(b)--
+SELECT companyname AS "Company Name",contactname AS "Supplier Contact",
+region AS "Supplier Region",country AS "Supplier Country" FROM corp.suppliers
+WHERE contacttitle in ('Sales Representative','Sales Manager');
+
+--------Exp: filtering based on contacttitle -----------------------
+
+--(c)--
+SELECT companyname AS "Company Name",contactname AS "Supplier Contact",
+region AS "Supplier Region",country AS "Supplier Country" FROM corp.suppliers
+WHERE contacttitle IN ('Sales Representative','Sales Manager') AND
+Country in ('Australia','UK','USA');
+
+----------Exp: Filtering out records based on countries ------------------
+
+--(d)--
+SELECT companyname AS "Company Name",contactname AS "Supplier Contact",
+region AS "Supplier Region",country AS "Supplier Country" FROM corp.suppliers
+WHERE contacttitle IN ('Sales Representative','Sales Manager') AND
+(Country IN ('Australia','UK') or Country='USA' AND region IS NOT NULL);
+
+-----------Exp: Not including null value regions for USA based and earlier filters -------- 
+
+--(e)--
+SELECT companyname AS "Company Name",contactname AS "Supplier Contact",
+region AS "Supplier Region",country AS "Supplier Country" FROM corp.suppliers
+WHERE contacttitle IN ('Sales Representative','Sales Manager') AND
+(Country IN ('Australia','UK') OR Country='USA' AND region IS NOT NULL)
+ORDER BY companyname;
+
+-----------Exp: ordering the records based on companyname --------------------------
+
+
+-----Question 2-----------
+--(a)--
+SELECT productid AS "Product ID",productname AS "Product Name",
+quantityperunit AS "Product Unit Size",unitprice AS "Product Unit Price"
+FROM corp.products;
+
+----- Exp: Reporting columns as per requirement ------------------
+
+--(b)--
+SELECT productid AS "Product ID",productname AS "Product Name",
+quantityperunit AS "Product Unit Size",ROUND(unitprice) AS "Product Unit Price"
+FROM corp.products;
+
+-------- Exp: Rounding unitprices to nearest integer -----------------
+
+--(c)--
+SELECT productid AS "Product ID",productname AS "Product Name",
+quantityperunit AS "Product Unit Size",ROUND(unitprice) AS "Product Unit Price"
+FROM corp.products WHERE discontinued<>'1';
+
+-------- Exp: Removing discontinued products -------------------------
+
+--(d)--
+SELECT productid AS "Product ID",productname AS "Product Name",
+quantityperunit AS "Product Unit Size",ROUND(unitprice) AS "Product Unit Price"
+FROM corp.products WHERE discontinued<>'1' ORDER BY 4 DESC,2;
+
+------- Ordering the data based on report requirement ----------------
+
+--(e)--
+SELECT productid AS "Product ID",productname AS "Product Name",
+quantityperunit AS "Product Unit Size",ROUND(unitprice) AS "Product Unit Price"
+FROM corp.products WHERE discontinued<>'1' AND (quantityperunit LIKE '%boxes%'
+OR quantityperunit LIKE '%pkg%')
+ORDER BY 4 DESC,2;
+
+-----------Exp: Including Quantity per type conditions to include boxes and pkg types ---------
+
+--(f)--
+SELECT productid AS "Product ID",productname AS "Product Name",
+quantityperunit AS "Product Unit Size",ROUND(unitprice) AS "Product Unit Price",
+companyname as "Supplier Company Name"
+FROM corp.products P INNER JOIN corp.suppliers S on P.supplierid=s.supplierid
+WHERE discontinued<>'1' AND (quantityperunit LIKE '%boxes%'
+OR quantityperunit LIKE '%pkg%')
+ORDER BY 4 DESC,2;
+
+-----------Exp: Including suppllier company name by joining suppliers table -----------------
+
+--(g)--
+SELECT productid AS "Product ID",productname AS "Product Name",
+quantityperunit AS "Product Unit Size",ROUND(unitprice) AS "Product Unit Price",
+companyname AS "Supplier Company Name",
+CONCAT(CONCAT(contactname,', '),contacttitle) AS "Supplier Contact"
+FROM corp.products P INNER JOIN corp.suppliers S on P.supplierid=s.supplierid
+WHERE discontinued<>'1' AND (quantityperunit LIKE '%boxes%'
+OR quantityperunit LIKE '%pkg%')
+ORDER BY 4 DESC,2;
+
+---------Exp: Using concat to generate supplier contact -------------------------------
+
+---Question 3------
+--(a)--
+
+SELECT C.custid AS "Customer ID",COUNT(orderid) AS "Num Orders"
+FROM corp.customers C INNER JOIN corp.orders O 
+ON C.custid=O.custid
+GROUP BY C.custid;
+
+-----Exp: Generating records with required data using aliasing and aggregate functions ---------
+
+--(b)--
+SELECT C.custid AS "Customer ID",
+COUNT(orderid) AS "Num Orders"
+FROM corp.customers C INNER JOIN corp.orders O 
+ON C.custid=O.custid
+HAVING COUNT(orderid)>10
+GROUP BY C.custid;
+
+------ Exp: Using having property to check for orders greater than 10 ------------
+
+--(c)--
+SELECT C.custid AS "Customer ID",companyname AS "Customer Name",
+COUNT(orderid) AS "Num Orders"
+FROM corp.customers C INNER JOIN corp.orders O 
+ON C.custid=O.custid
+HAVING COUNT(orderid)>10
+GROUP BY C.custid,companyname;
+
+------- Exp: Including company name in the output --------------------------
+
+--(d)--
+SELECT C.custid AS "Customer ID",companyname AS "Customer Name",
+COUNT(orderid) AS "Num Orders"
+FROM corp.customers C INNER JOIN corp.orders O 
+ON C.custid=O.custid
+WHERE C.country in ('Germany','Mexico','USA','Sweden')
+HAVING COUNT(orderid)>10
+GROUP BY C.custid,companyname;
+
+-------Exp: Excluding data from other countries not mentioned in requirement ---------
+
+--(e)--
+SELECT C.custid AS "Customer ID",companyname AS "Customer Name",
+to_char(avg(OD.quantity),'99.99') AS "Average Quantity",
+COUNT(O.orderid) AS "Num Orders"
+FROM corp.customers C INNER JOIN corp.orders O 
+ON C.custid=O.custid
+INNER JOIN corp.order_details OD on O.orderid=OD.orderID
+WHERE C.country in ('Germany','Mexico','USA','Sweden')
+HAVING COUNT(O.orderid)>10
+GROUP BY C.custid,companyname,OD.quantity;
+
+--------Joining order_details to fetch avg of quantities ----------------
+
+--(f)--
+SELECT CD.custid AS "Customer ID",orderid AS "Num Orders",
+CD.companyname AS "Customer Name",averagequantity AS "Average Quantity"
+FROM
+(SELECT c.custid AS custid,COUNT(o.orderid) AS orderid,c.companyName AS companyname
+FROM corp.customers c
+INNER JOIN corp.orders o ON c.custid = o.custid
+WHERE c.country IN ('Germany','Mexico','USA','Sweden')
+GROUP BY c.custid, c.companyname
+HAVING COUNT(o.orderid) > 10) CD
+INNER JOIN
+(SELECT c.custid,c.companyname,
+TO_CHAR(AVG(od.quantity),'99.99') AS averagequantity  
+FROM corp.order_details od
+INNER JOIN corp.orders  o
+ON o.orderid = od.orderid
+INNER JOIN corp.customers c
+ON c.custid = o.custid
+GROUP BY c.custid, c.companyname) OD
+ON CD.custid = OD.custId
+AND CD.companyname = OD.companyName
+ORDER BY 2;
+
+
+-----------Exp: As per the example provided in today's class I figured that my first query doesnt join the tables with aggregation of attributes. So, decided to Join the tables seperately and store the aggregate results in temp tables --------------------------
+
+/* Question 4 */
+/* Final Query */
+WITH countCTE AS (
+SELECT suppliers.supplierId,
+        count(products.productID) AS productCount
+FROM corp.suppliers
+INNER JOIN corp.products
+    ON suppliers.supplierId = products.supplierId
+GROUP BY suppliers.supplierId
+)
+SELECT supplierId AS "Supplier ID"
+        ,companyName AS "Company Name"
+        ,(SELECT COUNT(productId) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Products"
+        ,(SELECT COUNT(DISTINCT pl_id) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Product Lines" 
+FROM corp.suppliers
+WHERE (SELECT COUNT(DISTINCT pl_id) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) > 1
+    AND (SELECT COUNT(productId) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+        ) > (SELECT AVG(countCTE.productCount)
+            FROM countCTE
+            )
+ORDER BY 1
+;
+
+/* (a) Displaying supplier information: Supplier ID, Company Name, Number of 
+    Products, and Number of Product Lines   */
+SELECT supplierId AS "Supplier ID"
+        ,companyName AS "Company Name"
+        ,(SELECT COUNT(productId) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Products"
+        ,(SELECT COUNT(DISTINCT pl_id) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Product Lines" 
+FROM corp.suppliers
+;
+
+/* (b) Sorting the result by supplierId */
+SELECT supplierId AS "Supplier ID"
+        ,companyName AS "Company Name"
+        ,(SELECT COUNT(productId) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Products"
+        ,(SELECT COUNT(DISTINCT pl_id) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Product Lines" 
+FROM corp.suppliers
+ORDER BY 1
+;
+
+/* (c) Restricting the result to suppliers who supply more than 1 
+        product line */
+SELECT supplierId AS "Supplier ID"
+        ,companyName AS "Company Name"
+        ,(SELECT COUNT(productId) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Products"
+        ,(SELECT COUNT(DISTINCT pl_id) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Product Lines" 
+FROM corp.suppliers
+WHERE (SELECT COUNT(DISTINCT pl_id) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) > 1
+ORDER BY 1
+;
+
+/* (d) Restricting the result to suppliers for whom the number of products
+    supplied is more than the average number of products supplied*/
+WITH countCTE AS (
+SELECT suppliers.supplierId,
+        count(products.productID) AS productCount
+FROM corp.suppliers
+INNER JOIN corp.products
+    ON suppliers.supplierId = products.supplierId
+GROUP BY suppliers.supplierId
+)
+SELECT supplierId AS "Supplier ID"
+        ,companyName AS "Company Name"
+        ,(SELECT COUNT(productId) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Products"
+        ,(SELECT COUNT(DISTINCT pl_id) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) AS "Number of Product Lines" 
+FROM corp.suppliers
+WHERE (SELECT COUNT(DISTINCT pl_id) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+            ) > 1
+    AND (SELECT COUNT(productId) 
+            FROM corp.products 
+            WHERE products.supplierId = suppliers.supplierId
+        ) > (SELECT AVG(countCTE.productCount)
+            FROM countCTE
+            )
+ORDER BY 1
+;
+
+/* Question 5 */
+/* Final Query */
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,COUNT(orders.orderid) AS "Number of Orders"
+        ,COUNT(DISTINCT orders.shipvia) AS "Num Shippers"
+        ,AVG(orders.shippedDate - orders.requiredDate) as "Days Late"
+FROM corp.orders 
+INNER JOIN corp.customers 
+    ON customers.custId = orders.custId
+WHERE orders.requiredDate < orders.shippedDate
+    AND orders.orderDate >= '01-JAN-21'
+    AND customers.custId IN (SELECT distinct c.custid 
+                                FROM corp.customers c inner join corp.orders o on c.custid=o.custid
+                                WHERE orderdate >= '01-JAN-2022')
+GROUP BY customers.custId, customers.companyName
+    HAVING AVG(orders.shippedDate - orders.requiredDate) >
+            (SELECT AVG(shippedDate-requiredDate) 
+            FROM corp.orders 
+            WHERE requiredDate < shippedDate)
+ORDER BY 1
+;
+
+/* (a) Displaying customer ID, company name, and order ids for the late orders*/
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName  AS "Company Name"
+        ,orders.orderid
+FROM corp.orders 
+INNER JOIN corp.customers 
+    ON customers.custId = orders.custId
+WHERE orders.requiredDate < orders.shippedDate
+ORDER BY 1
+;
+
+/* (b) Displaying customer ID, company name, and the number of late orders */
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,COUNT(orders.orderid) AS "Number of Orders"
+FROM corp.orders 
+INNER JOIN corp.customers 
+    ON customers.custId = orders.custId
+WHERE orders.requiredDate < orders.shippedDate
+GROUP BY customers.custId ,customers.companyName
+ORDER BY 1
+;
+
+/* (c) Displaying customer ID, company name, the number of late orders, and 
+    the number of shippers for each customer */
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,COUNT(orders.orderid) AS "Number of Orders"
+        ,COUNT(DISTINCT orders.shipvia) AS "Num Shippers"
+FROM corp.orders 
+INNER JOIN corp.customers 
+    ON customers.custId = orders.custId
+WHERE orders.requiredDate < orders.shippedDate
+GROUP BY customers.custId ,customers.companyName
+ORDER BY 1
+;
+
+/* (d) Displaying customer ID, company name, the number of late orders, and 
+    the number of shippers for each customer, only those orders that are 
+    placed on or after Jan 1, 2021 */
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,COUNT(orders.orderid) AS "Number of Orders"
+        ,COUNT(DISTINCT orders.shipvia) AS "Num Shippers"
+FROM corp.orders 
+INNER JOIN corp.customers 
+    ON customers.custId = orders.custId
+WHERE orders.requiredDate < orders.shippedDate
+    AND orders.orderDate >= '01-JAN-21'
+GROUP BY customers.custId ,customers.companyName
+ORDER BY 1
+;
+
+/* (e) Displaying customer ID, company name, the number of late orders,
+    the number of shippers for each customer, and average number of days late,
+    only those orders that are placed on or after Jan 1, 2021 */
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,COUNT(orders.orderid) AS "Number of Orders"
+        ,COUNT(DISTINCT orders.shipvia) AS "Num Shippers"
+        ,AVG(orders.shippedDate- orders.requiredDate) as "Days Late"
+FROM corp.orders 
+INNER JOIN corp.customers 
+    ON customers.custId = orders.custId
+WHERE orders.requiredDate < orders.shippedDate
+    AND orders.orderDate >= '01-JAN-21'
+GROUP BY customers.custId, customers.companyName
+ORDER BY 1
+;
+
+
+/* (f) Modifying the result set to include only those customers who have Days 
+Late more than the average days late */
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,COUNT(orders.orderid) AS "Number of Orders"
+        ,COUNT(DISTINCT orders.shipvia) AS "Num Shippers"
+        ,AVG(orders.shippedDate- orders.requiredDate) as "Days Late"
+FROM corp.orders 
+INNER JOIN corp.customers 
+    ON customers.custId = orders.custId
+WHERE orders.requiredDate < orders.shippedDate
+    AND orders.orderDate >= '01-JAN-21'
+GROUP BY customers.custId, customers.companyName
+    HAVING AVG(orders.shippedDate - orders.requiredDate) >
+            (SELECT AVG(shippedDate-requiredDate) 
+            FROM corp.orders 
+            WHERE requiredDate < shippedDate)
+ORDER BY 1
+;
+
+/* (g) Restricting the results to customers who did not stop ordering in 2022 */
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,COUNT(orders.orderid) AS "Number of Orders"
+        ,COUNT(DISTINCT orders.shipvia) AS "Num Shippers"
+        ,AVG(orders.shippedDate - orders.requiredDate) as "Days Late"
+FROM corp.orders 
+INNER JOIN corp.customers 
+    ON customers.custId = orders.custId
+WHERE orders.requiredDate < orders.shippedDate
+    AND orders.orderDate >= '01-JAN-21'
+    AND customers.custId IN (SELECT distinct c.custid 
+                                FROM corp.customers c inner join corp.orders o on c.custid=o.custid
+                                WHERE orderdate >= '01-JAN-2022')
+GROUP BY customers.custId, customers.companyName
+    HAVING AVG(orders.shippedDate - orders.requiredDate) >
+            (SELECT AVG(shippedDate-requiredDate) 
+            FROM corp.orders 
+            WHERE requiredDate < shippedDate)
+ORDER BY 1
+;
+
+/* Question 6 */
+/* Final Query */
+WITH cteOrders AS
+(
+SELECT COUNT(orderId) AS orderCount
+FROM corp.customers
+INNER JOIN corp.orders
+    ON orders.custId = customers.custId
+GROUP BY customers.custId
+)
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,TO_CHAR(SUM(order_details.quantity * order_details.unitPrice)
+                    ,'$9,999,999.99') AS "Gross Revenue"
+        ,TO_CHAR(AVG(orders.freight),'$99,999.99') AS "Avg Freight"
+FROM corp.customers
+INNER JOIN corp.orders
+    ON customers.custId = orders.custId
+INNER JOIN corp.order_details
+    ON orders.orderId = order_details.orderId
+WHERE country IN ('USA', 'Mexico', 'Canada')
+    AND customers.custId IN (SELECT customers.custid 
+                            FROM corp.customers
+                            INNER JOIN corp.orders
+                                ON orders.custId = customers.custId 
+                            WHERE orders.orderDate BETWEEN 
+                                            '01-JAN-2021' AND '31-DEC-2021' 
+                            GROUP BY customers.custId  
+                            HAVING COUNT(distinct orders.orderId)>=2
+                            )
+GROUP BY customers.custId, customers.companyName
+HAVING COUNT(distinct orders.orderId) >= (SELECT MEDIAN(orderCount) 
+                                 FROM cteOrders)
+;
+
+/* (a) Displaying customer ID, company name*/
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+FROM corp.customers
+;
+
+/* (b) Displaying customer ID, company name for customers from the countries 
+    USA, Mexico, and Canada*/
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+FROM corp.customers
+WHERE country IN ('USA', 'Mexico', 'Canada')
+;
+
+/* (c) Displaying customer ID, company name, and gross revenue for customers 
+    from the countries USA, Mexico, and Canada*/
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,TO_CHAR(SUM(order_details.quantity * order_details.unitPrice)
+                    ,'$9,999,999.99') AS "Gross Revenue"
+FROM corp.customers
+INNER JOIN corp.orders
+    ON customers.custId = orders.custId
+INNER JOIN corp.order_details
+    ON orders.orderId = order_details.orderId
+WHERE country IN ('USA', 'Mexico', 'Canada')
+GROUP BY customers.custId, customers.companyName
+;
+
+/* (d) Restrict the result to customers who have made >= 2 orders in 2021 */
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,TO_CHAR(SUM(order_details.quantity * order_details.unitPrice)
+                    ,'$9,999,999.99') AS "Gross Revenue"
+FROM corp.customers
+INNER JOIN corp.orders
+    ON customers.custId = orders.custId
+INNER JOIN corp.order_details
+    ON orders.orderId = order_details.orderId
+WHERE country IN ('USA', 'Mexico', 'Canada')
+    AND customers.custId IN (SELECT customers.custid 
+                            FROM corp.customers
+                            INNER JOIN corp.orders
+                                ON orders.custId = customers.custId 
+                            WHERE orders.orderDate BETWEEN 
+                                            '01-JAN-2021' AND '31-DEC-2021' 
+                            GROUP BY customers.custId  
+                            HAVING COUNT(orders.orderId) >= 2
+                            )
+GROUP BY customers.custId, customers.companyName
+;
+
+/* (e) Displaying the average freight charges for each customer across 
+    the orders along with the results*/
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,TO_CHAR(SUM(order_details.quantity * order_details.unitPrice)
+                    ,'$9,999,999.99') AS "Gross Revenue"
+        ,TO_CHAR(AVG(orders.freight),'$99,999.99') AS "Avg Freight"
+FROM corp.customers
+INNER JOIN corp.orders
+    ON customers.custId = orders.custId
+INNER JOIN corp.order_details
+    ON orders.orderId = order_details.orderId
+WHERE country IN ('USA', 'Mexico', 'Canada')
+    AND customers.custId IN (SELECT customers.custid 
+                            FROM corp.customers
+                            INNER JOIN corp.orders
+                                ON orders.custId = customers.custId 
+                            WHERE orders.orderDate BETWEEN 
+                                            '01-JAN-2021' AND '31-DEC-2021' 
+                            GROUP BY customers.custId  
+                            HAVING COUNT(orders.orderId)>=2
+                            )
+GROUP BY customers.custId, customers.companyName
+;
+
+/* (f) Displaying results where the number of orders is greater than or 
+    equal to the median number of orders placed by all customers*/
+WITH cteOrders AS
+(
+SELECT COUNT(orderId) AS orderCount
+FROM corp.customers
+INNER JOIN corp.orders
+    ON orders.custId = customers.custId
+GROUP BY customers.custId
+)
+SELECT customers.custId AS "Customer ID"
+        ,customers.companyName AS "Company Name"
+        ,TO_CHAR(SUM(order_details.quantity * order_details.unitPrice)
+                    ,'$9,999,999.99') AS "Gross Revenue"
+        ,TO_CHAR(AVG(orders.freight),'$99,999.99') AS "Avg Freight"
+FROM corp.customers
+INNER JOIN corp.orders
+    ON customers.custId = orders.custId
+INNER JOIN corp.order_details
+    ON orders.orderId = order_details.orderId
+WHERE country IN ('USA', 'Mexico', 'Canada')
+    AND customers.custId IN (SELECT customers.custid 
+                            FROM corp.customers
+                            INNER JOIN corp.orders
+                                ON orders.custId = customers.custId 
+                            WHERE orders.orderDate BETWEEN 
+                                            '01-JAN-2021' AND '31-DEC-2021' 
+                            GROUP BY customers.custId  
+                            HAVING COUNT(distinct orders.orderId)>=2
+                            )
+GROUP BY customers.custId, customers.companyName
+HAVING COUNT(distinct orders.orderId) >= (SELECT MEDIAN(orderCount) 
+                                 FROM cteOrders)
+;
+
+/* Question 1 */
+/* Final Query */
+WITH pub AS (
+SELECT pub_id 
+                            FROM lms.library_items 
+                            GROUP BY pub_id 
+                            HAVING COUNT(DISTINCT item_type)>=2
+)
+SELECT publishers.pub_name AS "Publisher Name"
+        ,library_items.item_type AS "Item Type"
+        ,COUNT(DISTINCT library_items.lib_item_id) AS "No of Items"
+        ,SUM(library_item_copies.purchase_price) AS "Grand Total"
+        ,TO_CHAR(MEDIAN(library_item_copies.purchase_price),'$9,999.99') 
+        AS "Median Price"
+FROM lms.publishers
+INNER JOIN lms.library_items
+    ON publishers.pub_id = library_items.pub_id
+INNER JOIN lms.library_item_copies 
+    ON library_item_copies.lib_item_id = library_items.lib_item_id
+INNER JOIN pub
+    ON pub.pub_id = publishers.pub_id
+GROUP BY ROLLUP(publishers.pub_name, library_items.item_type)
+ORDER BY 1,2 
+;
+
+/* Question 2 */
+/* Final Query */
+WITH AvgPurchasePrice AS (
+SELECT library_item_copies.lib_item_id
+        ,AVG(library_item_copies.purchase_price) AS PurchasePrice
+FROM lms.library_item_copies
+GROUP BY library_item_copies.lib_item_id
+ORDER BY purchaseprice
+)
+SELECT library_items.lib_item_ID AS "Item ID"
+        ,library_items.title AS "Item Title"
+        ,COUNT(issue_details.issue_detail_id) AS "Issue Count"
+        ,RANK() OVER 
+        (ORDER BY COUNT(issue_details.issue_detail_id) DESC) as "Ranking Over Issue Count"
+FROM lms.library_items
+INNER JOIN lms.library_item_copies
+    ON library_items.lib_item_ID = library_item_copies.lib_item_ID
+LEFT OUTER JOIN lms.issue_details
+    ON issue_details.item_copy_id = library_item_copies.item_copy_id
+INNER JOIN AvgPurchasePrice 
+    ON AvgPurchasePrice.lib_item_id = library_items.lib_item_ID
+WHERE AvgPurchasePrice.PurchasePrice > 
+        (SELECT AVG(library_item_copies.purchase_price) AS "PurchasePrice"
+        FROM lms.library_item_copies)
+GROUP BY library_items.lib_item_ID
+        ,library_items.title
+ORDER BY 4,2
+FETCH FIRST 3 ROWS WITH TIES
+;
+
+/* Question 3 */
+/* Final Query */
+WITH CheckoutCounts AS (
+SELECT library_item_copies.lib_item_id 
+        ,COUNT(issue_details.issue_detail_id) AS checkout_max
+FROM lms.library_item_copies
+LEFT OUTER JOIN lms.issue_details
+    ON library_item_copies.item_copy_id = issue_details.item_copy_id
+GROUP BY library_item_copies.lib_item_id 
+)
+SELECT authors.au_id AS "Author ID"
+        ,authors.au_fname AS "Author's First Name"
+        ,authors.au_lname AS "Author's Last Name"
+        ,COUNT(DISTINCT books_authors.book_id) AS "No of books authored"
+        ,COUNT(issue_details.issue_detail_id) AS "Num Checkouts YTD"
+        ,COALESCE(MAX(CheckoutCounts.checkout_max),0) AS "Max Num Checkouts"
+FROM lms.authors
+LEFT OUTER JOIN lms.books_authors
+    ON authors.au_id = books_authors.au_id
+LEFT OUTER JOIN lms.library_item_copies
+    ON books_authors.book_id = library_item_copies.lib_item_id
+LEFT OUTER JOIN CheckoutCounts
+    ON CheckoutCounts.lib_item_id = library_item_copies.lib_item_id
+LEFT OUTER JOIN lms.issue_details
+    ON library_item_copies.item_copy_id = issue_details.item_copy_id
+    AND TO_CHAR(issue_details.issue_date,'YYYY') = '2022'
+GROUP BY authors.au_id
+        ,authors.au_fname
+        ,authors.au_lname
+;
+
+/* Question 4 */
+/* Final Query */
+WITH popular_lead AS (
+SELECT issue_details.issue_detail_id
+        ,issue_details.item_copy_id
+        ,issue_details.return_date
+        ,COALESCE(LEAD(issue_details.issue_date,1) 
+                    OVER (PARTITION BY issue_details.item_copy_id 
+                            ORDER BY issue_details.item_copy_id
+                                    ,issue_details.issue_date
+                                    ,issue_details.return_date)
+            ,CURRENT_DATE) AS next_issue_date
+FROM lms.issue_details
+)
+, popular_count AS (
+SELECT library_item_copies.lib_item_id
+        ,COUNT(popular_lead.issue_detail_id) AS count_borrow
+FROM popular_lead 
+INNER JOIN lms.library_item_copies
+    ON popular_lead.item_copy_id = library_item_copies.item_copy_id
+GROUP BY library_item_copies.lib_item_id
+HAVING COUNT(popular_lead.issue_detail_id) >= 5
+)
+, popular AS (
+SELECT library_item_copies.lib_item_id
+        ,AVG(popular_lead.next_issue_date - popular_lead.return_date) 
+        AS avg_checkout
+FROM popular_lead 
+INNER JOIN lms.library_item_copies
+    ON popular_lead.item_copy_id = library_item_copies.item_copy_id
+WHERE popular_lead.return_date IS NOT NULL
+GROUP BY library_item_copies.lib_item_id
+HAVING AVG(popular_lead.next_issue_date - popular_lead.return_date) <= 30
+)
+SELECT popular.lib_item_id AS "Popular Item ID" 
+        ,library_items.title AS "Popular Item Title"
+        ,popular_count.count_borrow AS "Number of times borrowed"
+FROM popular
+INNER JOIN lms.library_items
+	ON library_items.lib_item_id = popular.lib_item_id
+INNER JOIN lms.popular_count
+	ON popular.lib_item_id = popular_count.lib_item_id
+;
+
+/* Question 5 */
+/* Final Query */
+WITH pivot_cte AS (
+SELECT * FROM 
+(
+SELECT publishers.pub_id
+        ,publishers.pub_name
+        ,library_items.item_type
+        ,issue_details.issue_detail_id
+FROM lms.publishers
+LEFT OUTER JOIN lms.library_items
+    ON publishers.pub_id = library_items.pub_id
+LEFT OUTER JOIN lms.library_item_copies 
+    ON library_item_copies.lib_item_id = library_items.lib_item_id
+LEFT OUTER JOIN lms.issue_details
+    ON issue_details.item_copy_id = library_item_copies.item_copy_id
+)
+PIVOT
+(
+    COUNT(issue_detail_id)
+    FOR item_type IN ('Book' AS books_count
+                        ,'Magazine' AS magazine_count
+                        ,'Journal' AS journal_count)
+)
+)
+SELECT pivot_cte.pub_id AS "Publisher ID"
+        ,pivot_cte.pub_name AS "Publisher Name"
+        ,pivot_cte.books_count AS "Number of Book checkouts"
+        ,pivot_cte.magazine_count AS "Number of Magazine checkouts"
+        ,pivot_cte.journal_count AS "Number of Journal checkouts"
+        ,(pivot_cte.books_count 
+            + pivot_cte.magazine_count 
+            + pivot_cte.journal_count) AS "Total Number of checkouts"
+FROM pivot_cte
+;
+
+/* Question 6 */
+/* Final Query */
+WITH author_books AS (
+SELECT authors.au_id
+        ,COUNT(books_authors.book_id) AS author_books_count
+        ,LISTAGG(library_items.title,', ') 
+        WITHIN GROUP (ORDER BY library_items.title) AS books_list
+FROM lms.authors
+INNER JOIN lms.books_authors
+    ON books_authors.au_id = authors.au_id
+INNER JOIN lms.library_items
+    ON library_items.lib_item_id = books_authors.book_id
+GROUP BY authors.au_id
+HAVING COUNT(books_authors.book_id) >1
+)
+, member_books AS (
+SELECT members.member_id
+        ,authors.au_id
+        ,COUNT(DISTINCT books.book_id) AS member_books_count
+FROM lms.members
+INNER JOIN lms.issue_details
+    ON issue_details.member_id = members.member_id
+INNER JOIN lms.library_item_copies
+    ON library_item_copies.item_copy_id = issue_details.item_copy_id
+INNER JOIN lms.books
+    ON books.book_id = library_item_copies.lib_item_id
+INNER JOIN lms.books_authors
+    ON books_authors.book_id = books.book_id
+INNER JOIN lms.authors
+    ON authors.au_id = books_authors.au_id
+GROUP BY members.member_id
+        ,authors.au_id
+)
+SELECT members.member_id AS "Member's ID"
+        ,members.First_name || ' ' || members.Last_name AS "Member's Name"
+        ,authors.au_FName || ' ' || authors.au_LName AS "Author's Name"
+        ,author_books.books_list AS "Author's Books"
+FROM member_books
+INNER JOIN author_books
+    ON author_books.au_id = member_books.au_id
+    AND author_books.author_books_count = member_books.member_books_count
+INNER JOIN lms.authors
+    ON authors.au_id = author_books.au_id
+INNER JOIN lms.members
+    ON members.member_id = member_books.member_id
+;
+
+/* Question 1 */
+/* Final Query */
+WITH pub AS (
+SELECT pub_id 
+                            FROM lms.library_items 
+                            GROUP BY pub_id 
+                            HAVING COUNT(DISTINCT item_type)>=2
+)
+SELECT publishers.pub_name AS "Publisher Name"
+        ,library_items.item_type AS "Item Type"
+        ,COUNT(DISTINCT library_items.lib_item_id) AS "No of Items"
+        ,SUM(library_item_copies.purchase_price) AS "Grand Total"
+        ,TO_CHAR(MEDIAN(library_item_copies.purchase_price),'$9,999.99') 
+        AS "Median Price"
+FROM lms.publishers
+INNER JOIN lms.library_items
+    ON publishers.pub_id = library_items.pub_id
+INNER JOIN lms.library_item_copies 
+    ON library_item_copies.lib_item_id = library_items.lib_item_id
+INNER JOIN pub
+    ON pub.pub_id = publishers.pub_id
+GROUP BY ROLLUP(publishers.pub_name, library_items.item_type)
+ORDER BY 1,2 
+;
+
+
+/* Question 2 */
+/* Final Query */
+WITH AvgPurchasePrice AS (
+SELECT library_item_copies.lib_item_id
+        ,AVG(library_item_copies.purchase_price) AS PurchasePrice
+FROM lms.library_item_copies
+GROUP BY library_item_copies.lib_item_id
+ORDER BY purchaseprice
+)
+SELECT library_items.lib_item_ID AS "Item ID"
+        ,library_items.title AS "Item Title"
+        ,COUNT(issue_details.issue_detail_id) AS "Issue Count"
+        ,RANK() OVER 
+        (ORDER BY COUNT(issue_details.issue_detail_id) DESC) as "Ranking Over Issue Count"
+FROM lms.library_items
+INNER JOIN lms.library_item_copies
+    ON library_items.lib_item_ID = library_item_copies.lib_item_ID
+LEFT OUTER JOIN lms.issue_details
+    ON issue_details.item_copy_id = library_item_copies.item_copy_id
+INNER JOIN AvgPurchasePrice 
+    ON AvgPurchasePrice.lib_item_id = library_items.lib_item_ID
+WHERE AvgPurchasePrice.PurchasePrice > 
+        (SELECT AVG(library_item_copies.purchase_price) AS "PurchasePrice"
+        FROM lms.library_item_copies)
+GROUP BY library_items.lib_item_ID
+        ,library_items.title
+ORDER BY 4,2
+FETCH FIRST 3 ROWS WITH TIES
+;
+
+/* Question 3 */
+/* Final Query */
+WITH CheckoutCounts AS (
+SELECT library_item_copies.lib_item_id 
+        ,COUNT(issue_details.issue_detail_id) AS checkout_max
+FROM lms.library_item_copies
+LEFT OUTER JOIN lms.issue_details
+    ON library_item_copies.item_copy_id = issue_details.item_copy_id
+GROUP BY library_item_copies.lib_item_id 
+)
+SELECT authors.au_id AS "Author ID"
+        ,authors.au_fname AS "Author's First Name"
+        ,authors.au_lname AS "Author's Last Name"
+        ,COUNT(DISTINCT books_authors.book_id) AS "No of books authored"
+        ,COUNT(issue_details.issue_detail_id) AS "Num Checkouts YTD"
+        ,COALESCE(MAX(CheckoutCounts.checkout_max),0) AS "Max Num Checkouts"
+FROM lms.authors
+LEFT OUTER JOIN lms.books_authors
+    ON authors.au_id = books_authors.au_id
+LEFT OUTER JOIN lms.library_item_copies
+    ON books_authors.book_id = library_item_copies.lib_item_id
+LEFT OUTER JOIN CheckoutCounts
+    ON CheckoutCounts.lib_item_id = library_item_copies.lib_item_id
+LEFT OUTER JOIN lms.issue_details
+    ON library_item_copies.item_copy_id = issue_details.item_copy_id
+    AND TO_CHAR(issue_details.issue_date,'YYYY') = '2022'
+GROUP BY authors.au_id
+        ,authors.au_fname
+        ,authors.au_lname
+;
+
+/* Question 4 */
+/* Final Query */
+WITH popular_lead AS (
+SELECT issue_details.issue_detail_id
+        ,issue_details.item_copy_id
+        ,issue_details.return_date
+        ,COALESCE(LEAD(issue_details.issue_date,1) 
+                    OVER (PARTITION BY issue_details.item_copy_id 
+                            ORDER BY issue_details.item_copy_id
+                                    ,issue_details.issue_date
+                                    ,issue_details.return_date)
+            ,CURRENT_DATE) AS next_issue_date
+FROM lms.issue_details
+)
+, popular_count AS (
+SELECT library_item_copies.lib_item_id
+        ,COUNT(popular_lead.issue_detail_id) AS count_borrow
+FROM popular_lead 
+INNER JOIN lms.library_item_copies
+    ON popular_lead.item_copy_id = library_item_copies.item_copy_id
+GROUP BY library_item_copies.lib_item_id
+HAVING COUNT(popular_lead.issue_detail_id) >= 5
+)
+, popular AS (
+SELECT library_item_copies.lib_item_id
+        ,AVG(popular_lead.next_issue_date - popular_lead.return_date) 
+        AS avg_checkout
+FROM popular_lead 
+INNER JOIN lms.library_item_copies
+    ON popular_lead.item_copy_id = library_item_copies.item_copy_id
+WHERE popular_lead.return_date IS NOT NULL
+GROUP BY library_item_copies.lib_item_id
+HAVING AVG(popular_lead.next_issue_date - popular_lead.return_date) <= 30
+)
+SELECT popular.lib_item_id AS "Popular Item ID" 
+        ,library_items.title AS "Popular Item Title"
+        ,popular_count.count_borrow AS "Number of times borrowed"
+FROM popular
+INNER JOIN lms.library_items
+	ON library_items.lib_item_id = popular.lib_item_id
+INNER JOIN lms.popular_count
+	ON popular.lib_item_id = popular_count.lib_item_id
+;
+
+/* Question 5 */
+/* Final Query */
+WITH pivot_cte AS (
+SELECT * FROM 
+(
+SELECT publishers.pub_id
+        ,publishers.pub_name
+        ,library_items.item_type
+        ,issue_details.issue_detail_id
+FROM lms.publishers
+LEFT OUTER JOIN lms.library_items
+    ON publishers.pub_id = library_items.pub_id
+LEFT OUTER JOIN lms.library_item_copies 
+    ON library_item_copies.lib_item_id = library_items.lib_item_id
+LEFT OUTER JOIN lms.issue_details
+    ON issue_details.item_copy_id = library_item_copies.item_copy_id
+)
+PIVOT
+(
+    COUNT(issue_detail_id)
+    FOR item_type IN ('Book' AS books_count
+                        ,'Magazine' AS magazine_count
+                        ,'Journal' AS journal_count)
+)
+)
+SELECT pivot_cte.pub_id AS "Publisher ID"
+        ,pivot_cte.pub_name AS "Publisher Name"
+        ,pivot_cte.books_count AS "Number of Book checkouts"
+        ,pivot_cte.magazine_count AS "Number of Magazine checkouts"
+        ,pivot_cte.journal_count AS "Number of Journal checkouts"
+        ,(pivot_cte.books_count 
+            + pivot_cte.magazine_count 
+            + pivot_cte.journal_count) AS "Total Number of checkouts"
+FROM pivot_cte
+;
+
+
+/* Question 6 */
+/* Final Query */
+WITH author_books AS (
+SELECT authors.au_id
+        ,COUNT(books_authors.book_id) AS author_books_count
+        ,LISTAGG(library_items.title,', ') 
+        WITHIN GROUP (ORDER BY library_items.title) AS books_list
+FROM lms.authors
+INNER JOIN lms.books_authors
+    ON books_authors.au_id = authors.au_id
+INNER JOIN lms.library_items
+    ON library_items.lib_item_id = books_authors.book_id
+GROUP BY authors.au_id
+HAVING COUNT(books_authors.book_id) >1
+)
+, member_books AS (
+SELECT members.member_id
+        ,authors.au_id
+        ,COUNT(DISTINCT books.book_id) AS member_books_count
+FROM lms.members
+INNER JOIN lms.issue_details
+    ON issue_details.member_id = members.member_id
+INNER JOIN lms.library_item_copies
+    ON library_item_copies.item_copy_id = issue_details.item_copy_id
+INNER JOIN lms.books
+    ON books.book_id = library_item_copies.lib_item_id
+INNER JOIN lms.books_authors
+    ON books_authors.book_id = books.book_id
+INNER JOIN lms.authors
+    ON authors.au_id = books_authors.au_id
+GROUP BY members.member_id
+        ,authors.au_id
+)
+SELECT members.member_id AS "Member's ID"
+        ,members.First_name || ' ' || members.Last_name AS "Member's Name"
+        ,authors.au_FName || ' ' || authors.au_LName AS "Author's Name"
+        ,author_books.books_list AS "Author's Books"
+FROM member_books
+INNER JOIN author_books
+    ON author_books.au_id = member_books.au_id
+    AND author_books.author_books_count = member_books.member_books_count
+INNER JOIN lms.authors
+    ON authors.au_id = author_books.au_id
+INNER JOIN lms.members
+    ON members.member_id = member_books.member_id
+;
+
+/* Question 1 */
+
+CREATE SEQUENCE employees_seq
+MINVALUE 101
+MAXVALUE 999;
+  
+create sequence sales_seq
+MINVALUE 100000001
+MAXVALUE 899999999;
+  
+CREATE OR REPLACE TRIGGER Insert_Employee
+  BEFORE INSERT ON employees
+  FOR EACH ROW
+  BEGIN
+  :NEW.EMPLOYEEID:=concat('E',to_char(employees_seq.Nextval));
+  END;
+  /
+  
+CREATE OR REPLACE TRIGGER Insert_Sales
+  BEFORE INSERT ON sales
+  FOR EACH ROW
+  BEGIN
+  :NEW.SALEID:=concat('S',to_char(sales_seq.Nextval));
+  END;
+  /
+
+/* Question 2 */
+
+CREATE OR REPLACE TRIGGER Insert_users
+  AFTER INSERT ON USERS
+  FOR EACH ROW
+  BEGIN
+  update user_types set numofusers=numofusers+1 where usertypeid=:NEW.USERTYPEID;
+  END;
+  /
+  
+CREATE OR REPLACE TRIGGER Delete_users
+  BEFORE Delete ON USERS
+  FOR EACH ROW
+  BEGIN
+  delete from sales where userid=:OLD.USEERID;
+  update user_types set numofusers=numofusers-1 where usertypeid=:OLD.USERTYPEID;
+  END;
+  /
+  
+CREATE OR REPLACE TRIGGER Update_users
+  AFTER Update ON USERS
+  FOR EACH ROW
+  BEGIN
+  update user_types set numofusers=numofusers+1 where usertypeid=:NEW.USERTYPEID;
+  update user_types set numofusers=numofusers-1 where usertypeid=:OLD.USERTYPEID;
+  END;
+  /
+  
+
+/* Question 3 */
+
+CREATE OR REPLACE TRIGGER Create_sales
+  BEFORE INSERT ON sales
+   FOR EACH ROW
+  declare user_type users.userid%type;
+          user_discount user_types.Discount%type;
+          user_balance users.balance%type;
+          item_price items.itemprice%type;
+  BEGIN
+  select usertypeid into user_type from users where userid=:NEW.USERID;
+  select discount into user_discount from user_types where usertypeid=user_type;
+  select balance into user_balance from users where userid=:NEW.USERID;
+  select itemprice into item_price from items where itemid=:NEW.ITEMID;
+  if (user_balance>= item_price - (item_price*user_discount))
+  then
+  :NEW.SALEAMOUNT := item_price - (item_price*user_discount);
+  update users set balance = balance-:NEW.SALEAMOUNT where userid=:NEW.USERID;
+  else
+  raise_application_error
+          (201,'Not enough balance');
+    end if;
+  END;
+  /
+
+
+
+CREATE OR REPLACE TRIGGER Delete_sales
+  AFTER DELETE ON sales
+   FOR EACH ROW
+  BEGIN
+  update users set Balance=Balance+:OLD.SALEAMOUNT where userid=:OLD.USERID;
+  END;
+  /
+
+create or replace PROCEDURE
+update_user_balance (user_ID users.userid%type, amount users.balance%type) as
+usercount int;
+user_balance users.balance%type;
+Begin
+select count(*) into usercount from users where userid=user_ID;
+if usercount not in (1) then
+raise_application_error
+          (201,'Not a valid user');
+else
+select balance into user_balance from users where userid=user_ID;
+ if amount>0 then
+   update users set balance=balance+amount where userid=user_ID;
+ else
+   if user_balance<abs(amount) then
+   DBMS_OUTPUT.PUT_LINE ('Available balance is' || user_balance || ', attempted withdrawal is ' || amount);
+   else
+   update users set balance = balance-abs(amount) where userid=user_ID;
+   end if;
+ end if;
+ end if;
+ end;
+ /
+
+CREATE OR REPLACE PROCEDURE sales_report_procedure
+(rYear sales_report.saleyear%TYPE, rMonth sales_report.salemonth%TYPE) AS
+CURSOR curItems IS
+SELECT DISTINCT itemid FROM items;
+rOldyear sales_report.saleyear%TYPE;
+rOldmonth sales_report.salemonth%TYPE;
+rDateOld DATE;
+i INT;
+j INT;
+difference sales_report.differenceprevperiod%TYPE;
+prevrevenue sales_report.monthlysaleamount%TYPE;
+revenue sales_report.monthlysaleamount%TYPE;
+prevdifference sales_report.differenceprevperiod%TYPE;
+BEGIN
+IF rYear NOT IN ('2022','2021') THEN
+raise_application_error (-20102,'incorrect year');
+ELSIF rMonth<1 OR rMonth>12 THEN
+raise_application_error (-20202,'incorrect Month');
+ELSIF ((rYear > TO_CHAR(CURRENT_DATE,'YYYY')) OR ((rMonth > TO_CHAR(CURRENT_DATE,'MM')) AND (rYear = TO_CHAR(CURRENT_DATE,'YYYY') )))  THEN
+raise_application_error (-20202,'future month');
+ELSE
+IF rMonth=1 THEN
+rOldyear:=rYear-1;
+rOldmonth:=12;
+ELSE
+rOldyear:=rYear;
+rOldmonth:=rMonth-1;
+END IF;
+FOR item IN curItems LOOP
+SELECT COUNT(*) INTO i FROM sales_report WHERE itemid=item.itemid AND saleyear=rYear AND salemonth=rMonth;
+IF i>0 THEN
+dbms_output.put_line('this item is already present');
+CONTINUE;
+ELSE
+SELECT COUNT(*) INTO j FROM sales_report WHERE saleyear=rOldyear AND salemonth=rOldmonth AND itemid=item.itemid;
+IF j=1 THEN
+SELECT monthlysaleamount INTO prevrevenue FROM sales_report WHERE saleyear=rOldyear AND salemonth=rOldmonth AND itemid=item.itemid;
+ELSE
+prevrevenue:=NULL;
+difference:=0;
+END IF;
+SELECT SUM(saleamount) INTO revenue FROM sales WHERE TO_CHAR(saledate,'YYYY')=rYear AND TO_CHAR(saledate,'MM')=rMonth AND itemid=item.itemid;
+IF j=1 THEN
+difference:=revenue-prevrevenue;
+END IF;
+INSERT INTO sales_report VALUES (item.itemid,rYear,rMonth,COALESCE(revenue,0),COALESCE(difference,0));
+revenue:=NULL;
+prevrevenue:=NULL;
+difference:=NULL;
+END IF;
+END LOOP;
+END IF;
+END;
+/
